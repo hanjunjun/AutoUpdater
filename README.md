@@ -5,6 +5,7 @@
 
 Demo 演示：
 
+![Logo](https://github.com/HanJunJun/AutoUpdater/blob/master/Client/AutoUpdater.Client.Test/demo3.png)
 ![Logo](https://github.com/HanJunJun/AutoUpdater/blob/master/Client/AutoUpdater.Client.Test/demo1.png)
 ![Logo](https://github.com/HanJunJun/AutoUpdater/blob/master/Client/AutoUpdater.Client.Test/demo2.png)
 ![Logo](https://github.com/HanJunJun/AutoUpdater/blob/master/Client/AutoUpdater.Client.Test/客户端主动请求服务器文件逻辑流程.png)
