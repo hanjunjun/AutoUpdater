@@ -1,0 +1,1525 @@
+<#@ template  debug="true" hostSpecific="true" #>
+<#@ output extension=".cs" #>
+<#@ Assembly Name="System.Core" #>
+<#@ Assembly Name="System.Windows.Forms" #>
+<#@ import namespace="System" #>
+<#@ import namespace="System.IO" #>
+<#@ import namespace="System.Diagnostics" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Collections" #>
+<#@ import namespace="System.Collections.Generic" #> 
+#region -- License Terms --
+//
+// MessagePack for CLI
+//
+// Copyright (C) 2015-2016 FUJIWARA, Yusuke
+//
+//    Licensed under the Apache License, Version 2.0 (the "License");
+//    you may not use this file except in compliance with the License.
+//    You may obtain a copy of the License at
+//
+//        http://www.apache.org/licenses/LICENSE-2.0
+//
+//    Unless required by applicable law or agreed to in writing, software
+//    distributed under the License is distributed on an "AS IS" BASIS,
+//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//    See the License for the specific language governing permissions and
+//    limitations under the License.
+//
+#endregion -- License Terms --
+
+#if UNITY_5 || UNITY_STANDALONE || UNITY_WEBPLAYER || UNITY_WII || UNITY_IPHONE || UNITY_ANDROID || UNITY_PS3 || UNITY_XBOX360 || UNITY_FLASH || UNITY_BKACKBERRY || UNITY_WINRT
+#define UNITY
+#endif
+
+#if DEBUG
+#define ASSERT
+#endif // DEBUG
+
+using System;
+using System.Collections.Generic;
+#if !UNITY || MSGPACK_UNITY_FULL
+using System.ComponentModel;
+#endif // !UNITY || MSGPACK_UNITY_FULL
+#if ASSERT
+#if FEATURE_MPCONTRACT
+using Contract = MsgPack.MPContract;
+#else
+using System.Diagnostics.Contracts;
+#endif // FEATURE_MPCONTRACT
+#endif // ASSERT
+#if FEATURE_TAP
+using System.Threading;
+using System.Threading.Tasks;
+#endif // FEATURE_TAP
+
+namespace MsgPack.Serialization
+{
+	// This file is generated from UnpackHelpers.facade.tt file with T4.
+	// Do not modify this cs file directly.
+
+	partial class UnpackHelpers
+	{
+<#
+foreach ( var isAsync in new [] { false, true } )
+{
+	if ( isAsync )
+	{
+#>
+#if FEATURE_TAP
+<#
+	}
+
+	var methodName = "UnpackComplexObject" + MethodSuffix( isAsync );
+#>
+
+		/// <summary>
+		///		Unpacks the complex object from specified <see cref="Unpacker"/> with specified <see cref="MessagePackSerializer{T}"/><#= SummarySuffix( isAsync ) #>/
+		/// </summary>
+		/// <typeparam name="T">The type of unpacking value.</typeparam>
+		/// <param name="unpacker">The unpacker.</param>
+		/// <param name="serializer">The serializer to deserialize complex object.</param>
+		/// <param name="unpacked">The current unpacked count for debugging.</param>
+<#
+			if ( isAsync )
+			{
+#>
+		/// <param name="cancellationToken">The token to monitor for cancellation requests. The default value is <see cref="T:CancellationToken.None"/>.</param>
+<#
+			}
+#>
+		/// <returns>
+<#
+		if ( isAsync )
+		{
+#>
+		///		A <see cref="Task"/> that represents the asynchronous operation. 
+		///		The value of the <c>TResult</c> parameter contains a value whether the operation was succeeded and
+		///		a <typeparamref name="T" /> value read from current stream.
+<#
+		}
+		else
+		{
+#>
+		///		A value read from current stream.
+<#
+		}
+#>
+		/// </returns>
+		/// <exception cref="ArgumentNullException">
+		///		<paramref name="unpacker"/> is <c>null</c>.
+		///		Or, <paramref name="serializer"/> is <c>null</c>.
+		/// </exception>
+		/// <exception cref="ArgumentOutOfRangeException">
+		///		<paramref name="unpacked"/> is negative number.
+		/// </exception>
+#if !UNITY || MSGPACK_UNITY_FULL
+		[EditorBrowsable( EditorBrowsableState.Never )]
+#endif // !UNITY || MSGPACK_UNITY_FULL
+		[System.Diagnostics.CodeAnalysis.SuppressMessage( "Microsoft.Design", "CA1006:DoNotNestGenericTypesInMemberSignatures", Justification = "Collections/Delegates/Nullables/Task<T> essentially must be nested generic." )]
+		[System.Diagnostics.CodeAnalysis.SuppressMessage( "Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", MessageId = "0", Justification = "False positive because never reached." )]
+		[System.Diagnostics.CodeAnalysis.SuppressMessage( "Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", MessageId = "1", Justification = "False positive because never reached." )]
+		public static <#= AsyncT( isAsync ) #> <#= methodName #><T>( 
+			Unpacker unpacker, MessagePackSerializer<T> serializer, int unpacked<#= CancellationTokenParameter( isAsync ) #> 
+		)
+		{
+			if ( unpacker == null )
+			{
+				SerializationExceptions.ThrowArgumentNullException( "unpacker" );
+			}
+
+			if ( serializer == null )
+			{
+				SerializationExceptions.ThrowArgumentNullException( "serializer" );
+			}
+
+			if ( unpacked < 0 )
+			{
+				SerializationExceptions.ThrowArgumentCannotBeNegativeException( "unpacked" );
+			}
+
+#if ASSERT
+			Contract.Assert( unpacker != null );
+			Contract.Assert( serializer != null );
+			Contract.Assert( unpacked >= 0 );
+#endif // ASSERT
+<#
+			if ( !isAsync )
+			{
+#>
+			if ( !unpacker.Read() )
+<#
+			}
+			else
+			{
+#>
+			if ( !( await unpacker.ReadAsync( cancellationToken ).ConfigureAwait( false ) ) )
+<#
+			}
+#>
+			{
+				SerializationExceptions.ThrowMissingItem( unpacked, unpacker );
+			}
+
+			if ( !unpacker.IsArrayHeader && !unpacker.IsMapHeader )
+			{
+				return <#= Await( isAsync ) #>serializer.UnpackFrom<#= MethodSuffix( isAsync ) #>( unpacker<#= CancellationTokenArgument( isAsync ) #> )<#= ConfigureAwait( isAsync ) #>;
+			}
+			else
+			{
+				using ( var subtreeUnpacker = unpacker.ReadSubtree() )
+				{
+					return  <#= Await( isAsync ) #>serializer.UnpackFrom<#= MethodSuffix( isAsync ) #>( subtreeUnpacker<#= CancellationTokenArgument( isAsync ) #> )<#= ConfigureAwait( isAsync ) #>;
+				}
+			}
+		}
+
+<#
+	if ( isAsync )
+	{
+#>
+#endif // FEATURE_TAP
+
+<#
+	}
+} // foreach ( var isAsync )
+
+foreach ( var kind in new [] { TypeKind.Value, TypeKind.Reference, TypeKind.Nullable } )
+{
+	foreach ( var isAsync in new [] { false, true } )
+	{
+
+		if ( isAsync )
+		{
+#>
+#if FEATURE_TAP
+<#
+		}
+
+		var methodName = "Unpack" + kind + "TypeValue" + MethodSuffix( isAsync );
+		foreach ( var isExpandedParameters in new [] { true, false } )
+		{
+#>
+
+		/// <summary>
+		///		Unpacks the <#= kind.ToString().ToLowerInvariant() #> type value from MessagePack stream<#= SummarySuffix( isAsync ) #>.
+		/// </summary>
+		/// <typeparam name="TContext">The type of the context object which will store deserialized value.</typeparam>
+		/// <typeparam name="TValue">The type of the value.</typeparam>
+<#
+		if ( isExpandedParameters )
+		{
+#>
+		/// <param name="unpacker">The unpacker.</param>
+		/// <param name="context">The context which will store deserialized value.</param>
+		/// <param name="serializer">The serializer to deserialize complex object. This parameter should be <c>null</c> when <paramref name="directRead" /> is specified.</param>
+		/// <param name="itemsCount">The items count to be unpacked.</param>
+		/// <param name="unpacked">The unpacked items count.</param>
+		/// <param name="targetObjectType">Type of the target object for debugging message.</param>
+		/// <param name="memberName">Name of the member for debugging message.</param>
+<#
+		if ( kind != TypeKind.Value )
+		{
+#>
+		/// <param name="nilImplication">The nil implication of current item.</param>
+<#
+		}
+#>
+		/// <param name="directRead">The delegate which refers direct reading. This parameter should be <c>null</c> when <paramref name="serializer" /> is specified.</param>
+		/// <param name="setter">The delegate which takes <paramref name="context" /> and unpacked value, and then set the value to the context.</param>
+<#
+			if ( isAsync )
+			{
+#>
+		/// <param name="cancellationToken">The token to monitor for cancellation requests. The default value is <see cref="T:CancellationToken.None"/>.</param>
+<#
+			}
+		}
+		else
+		{
+#>
+		/// <param name="parameter">The reference to <see cref="<#= methodName #>Parameters{TContext, TValue}" /> object.</param>
+<#
+		}
+
+		if ( isAsync )
+		{
+#>
+		///	<returns>A <see cref="Task"/> that represents the asynchronous operation.</returns>
+<#
+		}
+#>
+		/// <exception cref="ArgumentNullException">
+<#
+			if ( isExpandedParameters )
+			{
+#>
+		///		<paramref name="unpacker"/> is <c>null</c>.
+		///		Or, <paramref name="context"/> is <c>null</c>.
+		///		Or, <paramref name="memberName"/> is <c>null</c>.
+		///		Or, <paramref name="targetObjectType"/> is <c>null</c>.
+		///		Or, <paramref name="setter"/> is <c>null</c>.
+<#
+			}
+			else
+			{
+#>
+		///		<see cref="<#= methodName #>Parameters{TContext, TValue}.Unpacker" /> of <paramref name="parameter"/> is <c>null</c>.
+		///		Or, <see cref="<#= methodName #>Parameters{TContext, TValue}.UnpackingContext" /> of <paramref name="parameter"/> is <c>null</c>.
+		///		Or, <see cref="<#= methodName #>Parameters{TContext, TValue}.MemberName" /> of <paramref name="parameter"/> is <c>null</c>.
+		///		Or, <see cref="<#= methodName #>Parameters{TContext, TValue}.TargetObjectType" /> of <paramref name="parameter"/> is <c>null</c>.
+		///		Or, <see cref="<#= methodName #>Parameters{TContext, TValue}.Setter" /> of <paramref name="parameter"/> is <c>null</c>.
+<#
+			}
+#>
+		/// </exception>
+		/// <exception cref="ArgumentOutOfRangeException">
+<#
+			if ( isExpandedParameters )
+			{
+#>
+		///		<paramref name="itemsCount"/> is negative number.
+		///		Or, <paramref name="unpacked"/> is negative number.
+<#
+			}
+			else
+			{
+#>
+		///		<see cref="<#= methodName #>Parameters{TContext, TValue}.ItemsCount" /> of <paramref name="parameter"/> is negative number.
+		///		Or, <see cref="<#= methodName #>Parameters{TContext, TValue}.Unpacked" /> of <paramref name="parameter"/> is negative number.
+<#
+			}
+#>
+		/// </exception>
+		/// <exception cref="ArgumentException">
+<#
+			if ( isExpandedParameters )
+			{
+#>
+		///		Both of <paramref name="directRead"/> and <paramref name="serializer" /> are <c>null</c>.
+<#
+			}
+			else
+			{
+#>
+		///		Both of <see cref="<#= methodName #>Parameters{TContext, TValue}.DirectRead" /> 
+		///		and <see cref="<#= methodName #>Parameters{TContext, TValue}.Serializer" /> of <paramref name="parameter"/> are <c>null</c>.
+<#
+			}
+#>
+		/// </exception>
+#if !UNITY || MSGPACK_UNITY_FULL
+		[EditorBrowsable( EditorBrowsableState.Never )]
+#endif // !UNITY || MSGPACK_UNITY_FULL
+<#
+		if ( isExpandedParameters )
+		{
+#>
+		[System.Diagnostics.CodeAnalysis.SuppressMessage( "Microsoft.Design", "CA1006:DoNotNestGenericTypesInMemberSignatures", Justification = "Collections/Delegates/Nullables/Task<T> essentially must be nested generic." )]
+		[System.Diagnostics.CodeAnalysis.SuppressMessage( "Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", MessageId = "0", Justification = "False positive because never reached." )]
+<#
+			if ( kind != TypeKind.Value )
+			{
+#>
+		[System.Diagnostics.CodeAnalysis.SuppressMessage( "Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", MessageId = "9", Justification = "False positive because never reached." )]
+<#
+			}
+			else
+			{
+#>
+		[System.Diagnostics.CodeAnalysis.SuppressMessage( "Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", MessageId = "8", Justification = "False positive because never reached." )]
+<#
+			}
+#>
+		public static <#= TaskVoid( isAsync ) #> <#= methodName #><TContext, TValue>(
+			Unpacker unpacker, TContext context, MessagePackSerializer<<#= TypeParameter( kind ) #>> serializer,
+			int itemsCount, int unpacked,
+			Type targetObjectType, string memberName,
+<#
+			if ( kind != TypeKind.Value )
+			{
+#>
+			NilImplication nilImplication,
+<#
+			}
+#>
+			<#= DirectReadDelegate( kind, isAsync ) #> directRead, Action<TContext, <#= TypeParameter( kind ) #>> setter<#= CancellationTokenParameter( isAsync ) #>
+		)
+			where TValue : <#= kind == TypeKind.Reference ? "class" : "struct" #>
+		{
+			if ( unpacker == null )
+			{
+				SerializationExceptions.ThrowArgumentNullException( "unpacker" );
+			}
+
+			if ( context == null )
+			{
+				SerializationExceptions.ThrowArgumentNullException( "context" );
+			}
+
+			if ( itemsCount < 0 )
+			{
+				SerializationExceptions.ThrowArgumentCannotBeNegativeException( "itemsCount" );
+			}
+
+			if ( unpacked < 0 )
+			{
+				SerializationExceptions.ThrowArgumentCannotBeNegativeException( "unpacked" );
+			}
+
+			if ( targetObjectType == null )
+			{
+				SerializationExceptions.ThrowArgumentNullException( "targetObjectType" );
+			}
+
+			if ( memberName == null )
+			{
+				SerializationExceptions.ThrowArgumentNullException( "memberName" );
+			}
+
+			if ( setter == null )
+			{
+				SerializationExceptions.ThrowArgumentNullException( "setter" );
+			}
+
+			if ( serializer == null && directRead == null )
+			{
+				SerializationExceptions.ThrowArgumentException( "directRead", "directRead cannot be null if serializer argument is null." );
+			}
+
+			var parameter =
+				new <#= methodName #>Parameters<TContext, TValue>
+				{
+					Unpacker = unpacker,
+					UnpackingContext = context,
+					Serializer = serializer,
+					ItemsCount = itemsCount,
+					Unpacked = unpacked,
+					TargetObjectType = targetObjectType,
+					MemberName = memberName,
+<#
+			if ( kind != TypeKind.Value )
+			{
+#>
+					NilImplication = nilImplication,
+<#
+			}
+#>
+					DirectRead = directRead,
+					Setter = setter,
+<#
+			if ( isAsync )
+			{
+#>
+					CancellationToken = cancellationToken
+<#
+			}
+#>
+				};
+			<#= ReturnVoid( isAsync ) #><#= methodName #>( ref parameter );
+		}
+<#
+			}
+			else // isExpandedParametrs
+			{
+#>
+		[System.Diagnostics.CodeAnalysis.SuppressMessage( "Microsoft.Design", "CA1045:DoNotPassTypesByReference", MessageId = "0#", Justification = "Avoiding memcpy is critical here." )]
+		public static <#= TaskVoid( isAsync ) #> <#= methodName #><TContext, TValue>(
+			ref <#= methodName #>Parameters<TContext, TValue> parameter
+		)
+			where TValue : <#= kind == TypeKind.Reference ? "class" : "struct" #>
+		{
+			if ( parameter.Unpacker == null )
+			{
+				SerializationExceptions.ThrowArgumentNullException( "parameter", "Unpacker" );
+			}
+
+			if ( parameter.UnpackingContext == null )
+			{
+				SerializationExceptions.ThrowArgumentNullException( "parameter", "UnpackingContext" );
+			}
+
+			if ( parameter.ItemsCount < 0 )
+			{
+				SerializationExceptions.ThrowArgumentCannotBeNegativeException( "parameter", "ItemsCount" );
+			}
+
+			if ( parameter.Unpacked < 0 )
+			{
+				SerializationExceptions.ThrowArgumentCannotBeNegativeException( "parameter", "Unpacked" );
+			}
+
+			if ( parameter.TargetObjectType == null )
+			{
+				SerializationExceptions.ThrowArgumentNullException( "parameter", "TargetObjectType" );
+			}
+
+			if ( parameter.MemberName == null )
+			{
+				SerializationExceptions.ThrowArgumentNullException( "parameter", "MemberName" );
+			}
+
+			if ( parameter.Setter == null )
+			{
+				SerializationExceptions.ThrowArgumentNullException( "parameter", "Setter" );
+			}
+
+			if ( parameter.Serializer == null && parameter.DirectRead == null )
+			{
+				SerializationExceptions.ThrowArgumentException( "parameter", "DirectRead cannot be null if Serializer field is null." );
+			}
+			
+			<#= ReturnVoid( isAsync ) #><#= methodName #>Core(
+				parameter.Unpacker,
+				parameter.UnpackingContext,
+				parameter.Serializer,
+				parameter.ItemsCount,
+				parameter.Unpacked,
+				parameter.TargetObjectType,
+				parameter.MemberName,
+<#
+				if ( kind != TypeKind.Value )
+				{
+#>
+				parameter.NilImplication,
+<#
+				}
+#>
+				parameter.DirectRead,
+				parameter.Setter
+<#
+				if ( isAsync )
+				{
+#>
+				, parameter.CancellationToken
+<#
+				}
+#>
+			);
+		}
+
+		private static <#= AsyncVoid( isAsync ) #> <#= methodName #>Core<TContext, TValue>(
+			Unpacker unpacker, TContext context, MessagePackSerializer<<#= TypeParameter( kind ) #>> serializer,
+			int itemsCount, int unpacked,
+			Type targetObjectType, string memberName,
+<#
+				if ( kind != TypeKind.Value )
+				{
+#>
+			NilImplication nilImplication,
+<#
+				}
+#>
+			<#= DirectReadDelegate( kind, isAsync ) #> directRead, Action<TContext, <#= TypeParameter( kind ) #>> setter<#= CancellationTokenParameter( isAsync ) #>
+		)
+			where TValue : <#= kind == TypeKind.Reference ? "class" : "struct" #>
+		{
+
+#if ASSERT
+			Contract.Assert( unpacker != null );
+			Contract.Assert( context != null );
+			Contract.Assert( itemsCount >= 0 );
+			Contract.Assert( unpacked >= 0 );
+			Contract.Assert( targetObjectType != null );
+			Contract.Assert( memberName != null );
+			Contract.Assert( setter != null );
+			Contract.Assert( serializer != null || directRead != null );
+#endif // ASSERT
+
+			<#= TValue( kind ) #> nullable;
+			if ( unpacked < itemsCount )
+			{
+				nullable =
+					<#=Await( isAsync ) #>( directRead != null
+						? directRead( unpacker, targetObjectType, memberName<#= CancellationTokenArgument( isAsync ) #> )
+						: UnpackComplexObject<#= MethodSuffix( isAsync ) #>( unpacker, serializer, unpacked<#= CancellationTokenArgument( isAsync ) #> ) );
+			}
+			else
+			{
+				nullable = null;
+			}
+
+			if ( nullable == null )
+			{
+<#
+				if ( kind != TypeKind.Value )
+				{
+#>
+				switch ( nilImplication )
+				{
+					case NilImplication.Prohibit:
+					{
+						SerializationExceptions.ThrowNullIsProhibited( memberName );
+						break;
+					}
+					case NilImplication.MemberDefault:
+					{
+						return;
+					}
+				}
+<#
+				}
+				else
+				{
+#>
+				SerializationExceptions.ThrowValueTypeCannotBeNull( memberName, typeof( TValue ), targetObjectType );
+<#
+				}
+#>
+			}
+
+			setter( context, nullable<#= kind == TypeKind.Value ? ".GetValueOrDefault()" : String.Empty #> );
+		}
+
+<#
+			} // isExpandedParametrs
+		} // foreach ( var isExpandedParametrs )
+
+		if ( isAsync )
+		{
+#>
+#endif // FEATURE_TAP
+
+<#
+		}
+	} // foreach ( var isAsync )
+} // foreach ( var isValueType )
+
+foreach ( var forMap in new [] { false, true } )
+{
+	foreach ( var isAsync in new [] { false, true } )
+	{
+		if ( isAsync )
+		{
+#>
+#if FEATURE_TAP
+<#
+		}
+
+		var methodName = "UnpackMessagePackObjectValueFrom" + ( forMap ? "Map" : "Array" ) + MethodSuffix( isAsync );
+		var parameterTypeName = "UnpackMessagePackObjectValue" + MethodSuffix( isAsync ) + "Parameters";
+#>
+
+		/// <summary>
+		///		Unpacks the <see cref="MessagePackObject" /> value from MessagePack <#= forMap ? "map" : "array" #><#= SummarySuffix( isAsync ) #>.
+		/// </summary>
+		/// <typeparam name="TContext">The type of the context object which will store deserialized value.</typeparam>
+		/// <param name="unpacker">The unpacker.</param>
+		/// <param name="context">The context which will store deserialized value.</param>
+		/// <param name="itemsCount">The items count to be unpacked.</param>
+		/// <param name="unpacked">The unpacked items count.</param>
+		/// <param name="memberName">Name of the member for debugging message.</param>
+		/// <param name="nilImplication">The nil implication of current item.</param>
+		/// <param name="setter">The delegate which takes <paramref name="context" /> and unpacked value, and then set the value to the context.</param>
+<#
+			if ( isAsync )
+			{
+#>
+		/// <param name="cancellationToken">The token to monitor for cancellation requests. The default value is <see cref="T:CancellationToken.None"/>.</param>
+		///	<returns>A <see cref="Task"/> that represents the asynchronous operation.</returns>
+<#
+			}
+#>
+		/// <exception cref="ArgumentNullException">
+		///		<paramref name="unpacker"/> is <c>null</c>.
+		///		Or, <paramref name="context"/> is <c>null</c>.
+		///		Or, <paramref name="memberName"/> is <c>null</c>.
+		///		Or, <paramref name="setter"/> is <c>null</c>.
+		/// </exception>
+		/// <exception cref="ArgumentOutOfRangeException">
+		///		<paramref name="itemsCount"/> is negative number.
+		///		Or, <paramref name="unpacked"/> is negative number.
+		/// </exception>
+#if !UNITY || MSGPACK_UNITY_FULL
+		[EditorBrowsable( EditorBrowsableState.Never )]
+#endif // !UNITY || MSGPACK_UNITY_FULL
+		[System.Diagnostics.CodeAnalysis.SuppressMessage( "Microsoft.Design", "CA1006:DoNotNestGenericTypesInMemberSignatures", Justification = "Collections/Delegates/Nullables/Task<T> essentially must be nested generic." )]
+		[System.Diagnostics.CodeAnalysis.SuppressMessage( "Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", MessageId = "0", Justification = "False positive because never reached." )]
+		[System.Diagnostics.CodeAnalysis.SuppressMessage( "Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", MessageId = "1", Justification = "False positive because never reached." )]
+		[System.Diagnostics.CodeAnalysis.SuppressMessage( "Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", MessageId = "4", Justification = "False positive because never reached." )]
+		[System.Diagnostics.CodeAnalysis.SuppressMessage( "Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", MessageId = "6", Justification = "False positive because never reached." )]
+		public static <#= TaskVoid( isAsync ) #> <#= methodName #><TContext>(
+			Unpacker unpacker, TContext context,
+			int itemsCount, int unpacked,
+			string memberName, NilImplication nilImplication,
+			Action<TContext, MessagePackObject> setter<#= CancellationTokenParameter( isAsync ) #>
+		)
+		{
+			if ( unpacker == null )
+			{
+				SerializationExceptions.ThrowArgumentNullException( "unpacker" );
+			}
+
+			if ( context == null )
+			{
+				SerializationExceptions.ThrowArgumentNullException( "context" );
+			}
+
+			if ( itemsCount < 0 )
+			{
+				SerializationExceptions.ThrowArgumentCannotBeNegativeException( "itemsCount" );
+			}
+
+			if ( unpacked < 0 )
+			{
+				SerializationExceptions.ThrowArgumentCannotBeNegativeException( "unpacked" );
+			}
+
+			if ( memberName == null )
+			{
+				SerializationExceptions.ThrowArgumentNullException( "memberName" );
+			}
+
+			if ( setter == null )
+			{
+				SerializationExceptions.ThrowArgumentNullException( "setter" );
+			}
+
+			var parameter =
+				new <#= parameterTypeName #><TContext>
+				{
+					Unpacker = unpacker,
+					UnpackingContext = context,
+					ItemsCount = itemsCount,
+					Unpacked = unpacked,
+					MemberName = memberName,
+					Setter = setter,
+					NilImplication = nilImplication,
+<#
+			if ( isAsync )
+			{
+#>
+					CancellationToken = cancellationToken
+<#
+			}
+#>
+				};
+			<#= ReturnVoid( isAsync ) #>UnpackMessagePackObjectValue<#= MethodSuffix( isAsync ) #>( ref parameter );
+		}
+<#
+
+		if ( isAsync )
+		{
+#>
+#endif // FEATURE_TAP
+
+<#
+		}
+	} // foreach ( var isAsync )
+} // foreach ( var forMap )
+
+foreach ( var isAsync in new [] { false, true } )
+{
+	if ( isAsync )
+	{
+#>
+#if FEATURE_TAP
+<#
+	}
+
+	var methodName = "UnpackMessagePackObjectValue" + MethodSuffix( isAsync );
+#>
+
+		/// <summary>
+		///		Unpacks the <see cref="MessagePackObject" /> value from MessagePack stream<#= SummarySuffix( isAsync ) #>.
+		/// </summary>
+		/// <typeparam name="TContext">The type of the context object which will store deserialized value.</typeparam>
+		/// <param name="parameter">The reference to <see cref="<#= methodName #>Parameters{T}" /> object.</param>
+<#
+	if ( isAsync )
+	{
+#>
+		///	<returns>A <see cref="Task"/> that represents the asynchronous operation.</returns>
+<#
+	}
+#>
+		/// <exception cref="ArgumentNullException">
+		///		<see cref="<#= methodName #>Parameters{TContext}.Unpacker" /> of <paramref name="parameter"/> is <c>null</c>.
+		///		Or, <see cref="<#= methodName #>Parameters{TContext}.UnpackingContext" /> of <paramref name="parameter"/> is <c>null</c>.
+		///		Or, <see cref="<#= methodName #>Parameters{TContext}.MemberName" /> of <paramref name="parameter"/> is <c>null</c>.
+		///		Or, <see cref="<#= methodName #>Parameters{TContext}.Setter" /> of <paramref name="parameter"/> is <c>null</c>.
+		/// </exception>
+		/// <exception cref="ArgumentOutOfRangeException">
+		///		<see cref="<#= methodName #>Parameters{TContext}.ItemsCount" /> of <paramref name="parameter"/> is negative number.
+		///		Or, <see cref="<#= methodName #>Parameters{TContext}.Unpacked" /> of <paramref name="parameter"/> is negative number.
+		/// </exception>
+#if !UNITY || MSGPACK_UNITY_FULL
+		[EditorBrowsable( EditorBrowsableState.Never )]
+#endif // !UNITY || MSGPACK_UNITY_FULL
+		[System.Diagnostics.CodeAnalysis.SuppressMessage( "Microsoft.Design", "CA1045:DoNotPassTypesByReference", MessageId = "0#", Justification = "Avoiding memcpy is critical here." )]
+		public static <#= TaskVoid( isAsync ) #> <#=  methodName #><TContext>(
+			ref <#= methodName #>Parameters<TContext> parameter
+		)
+		{
+			if ( parameter.Unpacker == null )
+			{
+				SerializationExceptions.ThrowArgumentNullException( "parameter", "Unpacker" );
+			}
+
+			if ( parameter.UnpackingContext == null )
+			{
+				SerializationExceptions.ThrowArgumentNullException( "parameter", "UnpackingContext" );
+			}
+
+			if ( parameter.ItemsCount < 0 )
+			{
+				SerializationExceptions.ThrowArgumentCannotBeNegativeException( "parameter", "ItemsCount" );
+			}
+
+			if ( parameter.Unpacked < 0 )
+			{
+				SerializationExceptions.ThrowArgumentCannotBeNegativeException( "parameter", "Unpacked" );
+			}
+
+			if ( parameter.MemberName == null )
+			{
+				SerializationExceptions.ThrowArgumentNullException( "parameter", "MemberName" );
+			}
+
+			if ( parameter.Setter == null )
+			{
+				SerializationExceptions.ThrowArgumentNullException( "parameter", "Setter" );
+			}
+
+			<#= ReturnVoid( isAsync ) #><#= methodName #>Core(
+					parameter.Unpacker,
+					parameter.UnpackingContext,
+					parameter.ItemsCount,
+					parameter.Unpacked,
+					parameter.MemberName,
+					parameter.NilImplication,
+					parameter.Setter
+<#
+	if ( isAsync )
+	{
+#>
+					, parameter.CancellationToken
+<#
+	}
+#>
+				);
+		}
+
+		private static <#= AsyncVoid( isAsync ) #> <#=  methodName #>Core<TContext>(
+			Unpacker unpacker, TContext unpackingContext,
+			int itemsCount, int unpacked,
+			string memberName, NilImplication nilImplication,
+			Action<TContext, MessagePackObject> setter<#= CancellationTokenParameter( isAsync ) #>
+		)
+		{
+#if ASSERT
+			Contract.Assert( unpacker != null );
+			Contract.Assert( unpackingContext != null );
+			Contract.Assert( itemsCount >= 0 );
+			Contract.Assert( unpacked >= 0 );
+			Contract.Assert( memberName != null );
+			Contract.Assert( setter != null );
+#endif // ASSERT
+
+			MessagePackObject nullable;
+			if ( unpacked < itemsCount )
+			{
+<#
+	if ( !isAsync )
+	{
+#>
+				if ( !unpacker.Read() )
+<#
+	}
+	else
+	{
+#>
+				if ( !( await unpacker.ReadAsync( cancellationToken ).ConfigureAwait( false ) ) )
+<#
+	}
+#>
+				{
+					SerializationExceptions.ThrowMissingItem( unpacked, memberName, unpacker );
+				}
+
+				nullable = unpacker.LastReadData;
+			}
+			else
+			{
+				nullable = MessagePackObject.Nil;
+			}
+
+			if ( nullable.IsNil )
+			{
+				switch ( nilImplication )
+				{
+					case NilImplication.Prohibit:
+					{
+						SerializationExceptions.ThrowNullIsProhibited( memberName );
+						break;
+					}
+					case NilImplication.MemberDefault:
+					{
+						return;
+					}
+				}
+			}
+
+			setter( unpackingContext, nullable );
+		}
+
+<#
+	if ( isAsync )
+	{
+#>
+#endif // FEATURE_TAP
+
+<#
+	}
+} // foreach ( var isAsync )
+
+foreach ( var forMap in new [] { false, true } )
+{
+	foreach ( var isAsync in new [] { false, true } )
+	{
+		if ( isAsync )
+		{
+#>
+#if FEATURE_TAP
+<#
+		}
+
+		var methodName = "UnpackFrom" + ( forMap ? "Map" : "Array" ) + MethodSuffix( isAsync );
+		foreach ( var isExpandedParameters in new [] { true, false } )
+		{
+#>
+
+		/// <summary>
+		///		Unpacks object from msgpack <#= forMap ? "map" : "array" #><#= SummarySuffix( isAsync )#>.
+		/// </summary>
+		/// <typeparam name="TContext">The type of the context.</typeparam>
+		/// <typeparam name="TResult">The type of the unpacked object.</typeparam>
+<#
+		if ( isExpandedParameters )
+		{
+#>
+		/// <param name="unpacker">The unpacker.</param>
+		/// <param name="context">The context which holds intermediate states. This value may be <c>null</c> when the caller implementation allows it.</param>
+		/// <param name="factory">A delegate to the factory method which creates the result from the context.</param>
+<#
+			if ( !forMap )
+			{
+#>
+		/// <param name="itemNames">The names of the members for pretty exception message.</param>
+<#
+			}
+#>
+		/// <param name="operations">
+		///		Delegates each ones unpack single member in order.
+<#
+			if ( forMap )
+			{
+#>
+		///		The key of this dictionary must be member name.
+<#
+			}
+#>
+		///		The 1st argument will be <paramref name="unpacker"/>, 2nd argument will be <paramref name="context"/>,
+		///		and 3rd argument is index of current item.
+		/// </param>
+<#
+			if ( isAsync )
+			{
+#>
+		/// <param name="cancellationToken">The token to monitor for cancellation requests. The default value is <see cref="T:CancellationToken.None"/>.</param>
+<#
+			}
+		}
+		else
+		{
+#>
+		/// <param name="parameter">The reference to <see cref="<#= methodName #>Parameters{TContext, TResult}" /> object.</param>
+<#
+		}
+#>
+		/// <returns>
+<#
+			if ( isAsync )
+			{
+#>
+		///		A <see cref="Task"/> that represents the asynchronous operation. 
+		///		The value of the <c>TResult</c> parameter contains a value whether the operation was succeeded and
+		///		an unpacked object.
+<#
+			}
+			else
+			{
+#>
+		///		An unpacked object.
+<#
+			}
+#>
+		/// </returns>
+		/// <exception cref="ArgumentNullException">
+<#
+			if ( isExpandedParameters )
+			{
+#>
+		///		<paramref name="unpacker"/> is <c>null</c>.
+		///		Or, <paramref name="factory"/> is <c>null</c>.
+		///		Or, <paramref name="operations"/> is <c>null</c>.
+<#
+			}
+			else
+			{
+#>
+		///		<see cref="<#= methodName #>Parameters{TContext, TResult}.Unpacker" /> of <paramref name="parameter"/> is <c>null</c>.
+		///		Or, <see cref="<#= methodName #>Parameters{TContext, TResult}.Factory" /> of <paramref name="parameter"/> is <c>null</c>.
+		///		Or, <see cref="<#= methodName #>Parameters{TContext, TResult}.Operations" /> of <paramref name="parameter"/> is <c>null</c>.
+<#
+			}
+#>
+		/// </exception>
+#if !UNITY || MSGPACK_UNITY_FULL
+		[EditorBrowsable( EditorBrowsableState.Never )]
+#endif // !UNITY || MSGPACK_UNITY_FULL
+<#
+			if ( isExpandedParameters )
+			{
+#>
+		[System.Diagnostics.CodeAnalysis.SuppressMessage( "Microsoft.Design", "CA1006:DoNotNestGenericTypesInMemberSignatures", Justification = "Collections/Delegates/Nullables/Task<T> essentially must be nested generic." )]
+		[System.Diagnostics.CodeAnalysis.SuppressMessage( "Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", MessageId = "0", Justification = "False positive because never reached." )]
+		[System.Diagnostics.CodeAnalysis.SuppressMessage( "Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", MessageId = "2", Justification = "False positive because never reached." )]
+<#
+				if ( !forMap )
+				{
+#>
+		[System.Diagnostics.CodeAnalysis.SuppressMessage( "Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", MessageId = "4", Justification = "False positive because never reached." )]
+		[System.Diagnostics.CodeAnalysis.SuppressMessage( "Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "itemNames", Justification = "For tracing." )]
+<#
+				}
+				else
+				{
+#>
+		[System.Diagnostics.CodeAnalysis.SuppressMessage( "Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", MessageId = "3", Justification = "False positive because never reached." )]
+<#
+				}
+#>
+		public static <#= TaskTResult( isAsync ) #> <#= methodName #><TContext, TResult>(
+			Unpacker unpacker, TContext context,
+			Func<TContext, TResult> factory, 
+<#
+				if ( !forMap )
+				{
+#>
+			IList<string> itemNames,
+<#
+				}
+#>
+			<#= OperationDelegateList( forMap, isAsync ) #> operations<#= CancellationTokenParameter( isAsync ) #>
+		)
+		{
+			if ( unpacker == null )
+			{
+				SerializationExceptions.ThrowArgumentNullException( "unpacker" );
+			}
+
+			if ( factory == null )
+			{
+				SerializationExceptions.ThrowArgumentNullException( "factory" );
+			}
+
+			if ( operations == null )
+			{
+				SerializationExceptions.ThrowArgumentNullException( "operations" );
+			}
+
+			var parameter =
+				new <#= methodName #>Parameters<TContext, TResult>
+				{
+					Unpacker = unpacker,
+					UnpackingContext = context,
+					Factory = factory,
+<#
+				if ( !forMap )
+				{
+#>
+					ItemNames = itemNames,
+<#
+				}
+#>
+					Operations = operations,
+<#
+		if ( isAsync )
+		{
+#>
+					CancellationToken = cancellationToken
+<#
+		}
+#>
+				};
+			return <#= methodName #>( ref parameter );
+		}
+<#
+			}
+			else // isExpandedParameters
+			{
+#>
+		[System.Diagnostics.CodeAnalysis.SuppressMessage( "Microsoft.Design", "CA1045:DoNotPassTypesByReference", MessageId = "0#", Justification = "Avoiding memcpy is critical here." )]
+		public static <#= TaskTResult( isAsync ) #> <#= methodName #><TContext, TResult>(
+			ref <#= methodName #>Parameters<TContext, TResult> parameter
+		)
+		{
+			if ( parameter.Unpacker == null )
+			{
+				SerializationExceptions.ThrowArgumentNullException( "parameter", "Unpacker" );
+			}
+
+			if ( parameter.Factory == null )
+			{
+				SerializationExceptions.ThrowArgumentNullException( "parameter", "Factory" );
+			}
+
+			if ( parameter.Operations == null )
+			{
+				SerializationExceptions.ThrowArgumentNullException( "parameter", "Operations" );
+			}
+
+			return 
+				<#= methodName #>Core(
+					parameter.Unpacker,
+					parameter.UnpackingContext,
+					parameter.Factory,
+<#
+				if ( !forMap )
+				{
+#>
+					parameter.ItemNames,
+<#
+				}
+#>
+					parameter.Operations
+<#
+				if ( isAsync )
+				{
+#>
+					, parameter.CancellationToken
+<#
+				}
+#>
+				);
+		}
+
+<#
+				if ( !forMap )
+				{
+#>
+		[System.Diagnostics.CodeAnalysis.SuppressMessage( "Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "itemNames", Justification = "For DEBUG build." )]
+<#
+				}
+#>
+		private static <#= AsyncTResult( isAsync ) #> <#= methodName #>Core<TContext, TResult>(
+			Unpacker unpacker, TContext unpackingContext,
+			Func<TContext, TResult> factory, 
+<#
+				if ( !forMap )
+				{
+#>
+			IList<string> itemNames,
+<#
+				}
+#>
+			<#= OperationDelegateList( forMap, isAsync ) #> operations<#= CancellationTokenParameter( isAsync ) #>
+		)
+		{
+#if ASSERT
+			Contract.Assert( unpacker != null );
+			Contract.Assert( factory != null );
+			Contract.Assert( operations != null );
+#endif // ASSERT
+
+			var count = GetItemsCount( unpacker );
+
+			// ReSharper disable once RedundantAssignment
+			var ctx = default( UnpackerTraceContext );
+			InitializeUnpackerTrace( unpacker, ref ctx );
+
+<#
+				if ( !forMap )
+				{
+#>
+			var limit = Math.Min( count, operations.Count );
+<#
+				}
+				else
+				{
+#>
+			var limit = count;
+<#
+				}
+#>
+			for ( var i = 0; i < limit; i++ )
+			{
+<#
+				if ( !forMap )
+				{
+#>
+				<#= Await( isAsync ) #>operations[ i ]( unpacker, unpackingContext, i, count<#= CancellationTokenArgument( isAsync ) #> )<#= ConfigureAwait( isAsync ) #>;
+				Trace( ctx, "ReadItem", unpacker, i, itemNames );
+<#
+				}
+				else
+				{
+#>
+				var key = <#= Await( isAsync ) #>UnpackStringValue<#= MethodSuffix( isAsync ) #>( unpacker, typeof( TResult ), "MemberName"<#= CancellationTokenArgument( isAsync ) #> )<#= ConfigureAwait( isAsync ) #>;
+				Trace( ctx, "ReadKey", unpacker, i, key );
+
+				<#= EachOperationDelegate( "TContext", isAsync ) #> operation;
+				if ( key != null && operations.TryGetValue( key, out operation ) )
+				{
+					<#= Await( isAsync ) #>operation( unpacker, unpackingContext, i, count<#= CancellationTokenArgument( isAsync ) #> )<#= ConfigureAwait( isAsync ) #>;
+					Trace( ctx, "ReadValue", unpacker, i, key );
+				}
+				else
+				{
+					// skip unknown item.
+					<#= Await( isAsync ) #>unpacker.Skip<#= MethodSuffixVoid( isAsync ) #>;
+					Trace( ctx, "Skip", unpacker, i, key ?? "(null)" );
+				}
+<#
+				}
+#>
+			}
+
+			if ( count > limit )
+			{
+				for ( var i = limit; i < count; i++ )
+				{
+					<#= Await( isAsync ) #>unpacker.Read<#= MethodSuffixVoid( isAsync ) #>;
+				}
+			}
+
+			return factory( unpackingContext );
+		}
+
+<#
+			} // isExpandedParameters
+		} // foreach( var isExpandedParameters )
+
+		if ( isAsync )
+		{
+#>
+#endif // FEATURE_TAP
+
+<#
+		}
+	} // foreach ( var isAsync )
+} // foreach ( var forMap )
+
+foreach ( var isAsync in new [] { false, true } )
+{
+	if ( isAsync )
+	{
+#>
+#if FEATURE_TAP
+
+<#
+	}
+
+	var methodName = "UnpackCollection" + MethodSuffix( isAsync );
+	foreach ( var isExpandedParameters in new [] { true, false } )
+	{
+#>
+		/// <summary>
+		///		Unpacks the collection from MessagePack stream<#= SummarySuffix( isAsync ) #>.
+		/// </summary>
+		/// <typeparam name="T">The type of the collection to be unpacked.</typeparam>
+<#
+		if ( isExpandedParameters )
+		{
+#>
+		/// <param name="unpacker">The unpacker where position is located at array or map header.</param>
+		/// <param name="itemsCount">The collection count gotten from the <paramref name="unpacker"/>.</param>
+		/// <param name="collection">The collection instance to be added unpacked items.</param>
+		/// <param name="bulkOperation">
+		///		A delegate to the bulk operation (typically UnpackToCore call). 
+		///		The 1st argument will be <paramref name="unpacker"/>, 2nd argument will be <paramref name="collection"/>,
+		///		and 3rd argument will be <paramref name="itemsCount"/>.
+		///		If this parameter is <c>null</c>, <paramref name="eachOperation"/> will be used.
+		/// </param>
+		/// <param name="eachOperation">
+		///		A delegate to the operation for each items, which typically unpack value and append it to the <paramref name="collection"/>.
+		///		The 1st argument will be <paramref name="unpacker"/>, 2nd argument will be <paramref name="collection"/>,
+		///		and 3rd argument will be index of the current item.
+		///		If <paramref name="bulkOperation"/> parameter is not <c>null</c>, this parameter will be ignored.
+		/// </param>
+<#
+			if ( isAsync )
+			{
+#>
+		/// <param name="cancellationToken">The token to monitor for cancellation requests. The default value is <see cref="T:CancellationToken.None"/>.</param>
+<#
+			}
+		}
+		else
+		{
+#>
+		/// <param name="parameter">The reference to <see cref="<#= methodName #>Parameters{T}" /> object.</param>
+<#
+		}
+#>
+		/// <returns>
+<#
+		if ( isAsync )
+		{
+#>
+		///		A <see cref="Task"/> that represents the asynchronous operation. 
+		///		The value of the <c>TResult</c> parameter contains a value whether the operation was succeeded and
+		///		an unpacked collection.
+<#
+		}
+		else
+		{
+#>
+		///		An unpacked collection.
+<#
+		}
+#>
+		/// </returns>
+#if !UNITY || MSGPACK_UNITY_FULL
+		[EditorBrowsable( EditorBrowsableState.Never )]
+#endif // !UNITY || MSGPACK_UNITY_FULL
+<#
+		if ( isExpandedParameters )
+		{
+#>
+		[System.Diagnostics.CodeAnalysis.SuppressMessage( "Microsoft.Design", "CA1006:DoNotNestGenericTypesInMemberSignatures", Justification = "Collections/Delegates/Nullables/Task<T> essentially must be nested generic." )]
+		[System.Diagnostics.CodeAnalysis.SuppressMessage( "Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", MessageId = "2", Justification = "False positive because never reached." )]
+		[System.Diagnostics.CodeAnalysis.SuppressMessage( "Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", MessageId = "4", Justification = "False positive because never reached." )]
+		public static <#= TaskT( isAsync ) #> <#= methodName #><T>(
+			Unpacker unpacker, int itemsCount, T collection, <#= BulkOperationDelegate( "T", isAsync ) #> bulkOperation, <#= EachOperationDelegate( "T", isAsync ) #> eachOperation<#= CancellationTokenParameter( isAsync ) #>
+		)
+		{
+			if ( unpacker == null )
+			{
+				SerializationExceptions.ThrowArgumentNullException( "unpacker" );
+			}
+
+			if ( collection == null )
+			{
+				SerializationExceptions.ThrowArgumentNullException( "collection" );
+			}
+
+			var parameters =
+				new <#= methodName #>Parameters<T>
+				{
+					Unpacker = unpacker,
+					ItemsCount = itemsCount,
+					Collection = collection,
+					BulkOperation = bulkOperation,
+					EachOperation = eachOperation,
+<#
+			if ( isAsync )
+			{
+#>
+					CancellationToken = cancellationToken
+<#
+			}
+#>
+				};
+			return <#= methodName #>( ref parameters );
+		}
+<#
+		}
+		else // isExpandedParameters
+		{
+#>
+		[System.Diagnostics.CodeAnalysis.SuppressMessage( "Microsoft.Design", "CA1045:DoNotPassTypesByReference", MessageId = "0#", Justification = "Avoiding memcpy is critical here." )]
+		public static <#= TaskT( isAsync ) #> <#= methodName #><T>(
+			ref <#= methodName #>Parameters<T> parameter
+		)
+		{
+			if ( parameter.Unpacker == null )
+			{
+				SerializationExceptions.ThrowArgumentNullException( "parameter", "Unpacker" );
+			}
+
+			if ( parameter.Collection == null )
+			{
+				SerializationExceptions.ThrowArgumentNullException( "parameter", "Collection" );
+			}
+
+			return 
+				<#= methodName #>Core(
+					parameter.Unpacker,
+					parameter.ItemsCount,
+					parameter.Collection,
+					parameter.BulkOperation,
+					parameter.EachOperation
+<#
+			if ( isAsync )
+			{
+#>
+					, parameter.CancellationToken
+<#
+			}
+#>
+				);
+		}
+
+		private static <#= AsyncT( isAsync ) #> <#= methodName #>Core<T>(
+			Unpacker unpacker, int itemsCount, T collection, <#= BulkOperationDelegate( "T", isAsync ) #> bulkOperation, <#= EachOperationDelegate( "T", isAsync ) #> eachOperation<#= CancellationTokenParameter( isAsync ) #>
+		)
+		{
+			// ReSharper disable once RedundantAssignment
+			var ctx = default( UnpackerTraceContext );
+			InitializeUnpackerTrace( unpacker, ref ctx );
+
+			if ( bulkOperation != null )
+			{
+				<#= Await( isAsync ) #>bulkOperation( unpacker, collection, itemsCount<#= CancellationTokenArgument( isAsync ) #> )<#= ConfigureAwait( isAsync ) #>;
+
+				Trace( ctx, "UnpackTo", unpacker );
+			}
+			else
+			{
+				if ( eachOperation == null )
+				{
+					SerializationExceptions.ThrowArgumentException( "eachOperation", "eachOperation cannot not be null when bulkOperation is null." );
+				}
+
+#if ASSERT
+				Contract.Assert( eachOperation != null );
+#endif // ASSERT
+
+				for ( var i = 0; i < itemsCount; i++ )
+				{
+					<#= Await( isAsync ) #>eachOperation( unpacker, collection, i, itemsCount<#= CancellationTokenArgument( isAsync ) #> )<#= ConfigureAwait( isAsync ) #>;
+					Trace( ctx, "ReadItem", unpacker, i );
+				}
+			}
+
+			return collection;
+		}
+
+<#
+		} // isExpandedParameters
+	} // foreach ( var isExpandedParameters )
+
+	if ( isAsync )
+	{
+#>
+#endif // FEATURE_TAP
+
+<#
+	}
+} // foreach ( var isAsync )
+#>
+	}
+}
+<#+
+private static string DirectReadDelegate( TypeKind kind, bool isAsync )
+{
+	return 
+		isAsync 
+		? ( "Func<Unpacker, Type, string, CancellationToken, Task<" + TypeParameter( kind ) + ">>" )
+		: ( "Func<Unpacker, Type, string, " + TypeParameter( kind ) +">" );
+}
+
+private static string OperationDelegateList( bool forMap, bool isAsync )
+{
+	return ( forMap ? "IDictionary<string, " : "IList<" ) + ( isAsync ? "Func<Unpacker, TContext, int, int, CancellationToken, Task>>" : "Action<Unpacker, TContext, int, int>>" );
+}
+
+private static string BulkOperationDelegate( string type, bool isAsync )
+{
+	return isAsync ? ( "Func<Unpacker, " + type + ", int, CancellationToken, Task>" ) : ( "Action<Unpacker, " + type + ", int>" );
+}
+
+private static string EachOperationDelegate( string type, bool isAsync )
+{
+	return isAsync ? ( "Func<Unpacker, " + type + ", int, int, CancellationToken, Task>" ) : ( "Action<Unpacker, " + type + ", int, int>" );
+}
+
+private static string TValue( TypeKind kind )
+{
+	return kind == TypeKind.Reference ? "TValue" : "TValue?";
+}
+
+private static string TypeParameter( TypeKind kind )
+{
+	return kind == TypeKind.Nullable ? "TValue?" : "TValue";
+}
+
+private static string SummarySuffix( bool isAsync )
+{
+	return isAsync ? " asyncronously" : String.Empty;
+}
+
+private static string TaskVoid( bool isAsync )
+{
+	return isAsync ? "Task" : "void";
+}
+
+private static string AsyncVoid( bool isAsync )
+{
+	return isAsync ? "async Task" : "void";
+}
+
+private static string TaskT( bool isAsync )
+{
+	return isAsync ? "Task<T>" : "T";
+}
+
+private static string AsyncT( bool isAsync )
+{
+	return isAsync ? "async Task<T>" : "T";
+}
+
+private static string TaskTResult( bool isAsync )
+{
+	return isAsync ? "Task<TResult>" : "TResult";
+}
+
+private static string AsyncTResult( bool isAsync )
+{
+	return isAsync ? "async Task<TResult>" : "TResult";
+}
+
+private static string MethodSuffix( bool isAsync )
+{
+	return isAsync ? "Async" : String.Empty;
+}
+
+private static string MethodSuffixVoid( bool isAsync )
+{
+	return isAsync ? "Async( cancellationToken ).ConfigureAwait( false )" : "()";
+}
+
+private static string CancellationTokenParameter( bool isAsync )
+{
+	return isAsync ? ", CancellationToken cancellationToken" : String.Empty;
+}
+
+private static string CancellationTokenArgument( bool isAsync )
+{
+	return isAsync ? ", cancellationToken" : String.Empty;
+}
+
+private static string Await( bool isAsync )
+{
+	return isAsync ? "await " : String.Empty;
+}
+
+private static string ConfigureAwait( bool isAsync )
+{
+	return isAsync ? ".ConfigureAwait( false )" : String.Empty;
+}
+
+private static string ReturnVoid( bool isAsync )
+{
+	return isAsync ? "return " : String.Empty;
+}
+
+private enum TypeKind
+{
+	Value,
+	Reference,
+	Nullable
+}
+#>

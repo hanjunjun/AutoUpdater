@@ -1,0 +1,7 @@
+﻿<#@ template debug="true" hostSpecific="true" language="C#" #>
+<#@ output extension=".cs" #>
+<#@ include file=".\Unpacker.Unpacking.ttinclude" #>
+<#@ Assembly Name="System.Core.dll" #>
+<#
+Write( "Unpacker", "virtual", String.Empty, "Unpacker.Unpacking.tt", /* isBase */true );
+#>
